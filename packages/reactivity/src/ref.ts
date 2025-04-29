@@ -109,6 +109,7 @@ class RefImpl<T = any> {
   _value: T
   private _rawValue: T
 
+  // 用于收集依赖、通知订阅
   dep: Dep = new Dep()
 
   public readonly [ReactiveFlags.IS_REF] = true
@@ -135,6 +136,7 @@ class RefImpl<T = any> {
 
   set value(newValue) {
     const oldValue = this._rawValue
+    //  是否直接使用新值
     const useDirectValue =
       this[ReactiveFlags.IS_SHALLOW] ||
       isShallow(newValue) ||
@@ -143,6 +145,7 @@ class RefImpl<T = any> {
     if (hasChanged(newValue, oldValue)) {
       this._rawValue = newValue
       this._value = useDirectValue ? newValue : toReactive(newValue)
+      // 通知订阅者
       if (__DEV__) {
         this.dep.trigger({
           target: this,
@@ -247,17 +250,26 @@ export function toValue<T>(source: MaybeRefOrGetter<T>): T {
   return isFunction(source) ? source() : unref(source)
 }
 
+// shallowUnwrapHandlers 是一个代理处理器对象,用于处理对响应式对象的访问和修改
 const shallowUnwrapHandlers: ProxyHandler<any> = {
+  // get 处理器用于获取属性值
   get: (target, key, receiver) =>
+    // 如果访问的是 RAW 标记,则返回原始对象
     key === ReactiveFlags.RAW
       ? target
-      : unref(Reflect.get(target, key, receiver)),
+      : // 否则对获取的值进行 unref 解包,处理可能是 ref 的情况
+        unref(Reflect.get(target, key, receiver)),
+
+  // set 处理器用于设置属性值
   set: (target, key, value, receiver) => {
     const oldValue = target[key]
+    // 如果原来的值是 ref,但新值不是 ref
     if (isRef(oldValue) && !isRef(value)) {
+      // 则直接设置 ref 的 value 属性
       oldValue.value = value
       return true
     } else {
+      // 其他情况走默认的赋值逻辑
       return Reflect.set(target, key, value, receiver)
     }
   },
@@ -295,7 +307,7 @@ class CustomRefImpl<T> {
 
   public readonly [ReactiveFlags.IS_REF] = true
 
-  public _value: T = undefined!
+  public _value: T = undefined! // 非空断言, 虽初始值是 undefined, 但保证这个值在使用时一定不会是 undefined
 
   constructor(factory: CustomRefFactory<T>) {
     const dep = (this.dep = new Dep())
