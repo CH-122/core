@@ -65,33 +65,33 @@ export class Link {
  * @internal
  */
 export class Dep {
-  version = 0
+  version = 0 // 用于追踪更新
   /**
    * Link between this dep and the current active effect
    */
-  activeLink?: Link = undefined
+  activeLink?: Link = undefined // 当前正在执行的effect
 
   /**
    * Doubly linked list representing the subscribing effects (tail)
    */
-  subs?: Link = undefined
+  subs?: Link = undefined // 订阅者列表（尾部）
 
   /**
    * Doubly linked list representing the subscribing effects (head)
    * DEV only, for invoking onTrigger hooks in correct order
    */
-  subsHead?: Link
+  subsHead?: Link // 订阅者列表（头部）仅在开发环境下使用
 
   /**
    * For object property deps cleanup
    */
-  map?: KeyToDepMap = undefined
-  key?: unknown = undefined
+  map?: KeyToDepMap = undefined // 对象属性依赖清理用的 Map
+  key?: unknown = undefined // 依赖的键
 
   /**
    * Subscriber counter
    */
-  sc: number = 0
+  sc: number = 0 // 订阅者计数器
 
   constructor(public computed?: ComputedRefImpl | undefined) {
     if (__DEV__) {
@@ -165,7 +165,7 @@ export class Dep {
   }
 
   notify(debugInfo?: DebuggerEventExtraInfo): void {
-    startBatch()
+    startBatch() // 开始批量处理
     try {
       if (__DEV__) {
         // subs are notified and batched in reverse-order and then invoked in

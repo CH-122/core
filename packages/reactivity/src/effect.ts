@@ -32,7 +32,7 @@ export interface ReactiveEffectOptions extends DebuggerOptions {
 }
 
 export interface ReactiveEffectRunner<T = any> {
-  (): T
+  (): T // 可调用对象
   effect: ReactiveEffect
 }
 
@@ -124,6 +124,7 @@ export class ReactiveEffect<T = any>
 
   resume(): void {
     if (this.flags & EffectFlags.PAUSED) {
+      // &= ~ 清除标志位 PAUSED
       this.flags &= ~EffectFlags.PAUSED
       if (pausedQueueEffects.has(this)) {
         pausedQueueEffects.delete(this)
@@ -136,12 +137,14 @@ export class ReactiveEffect<T = any>
    * @internal
    */
   notify(): void {
+    // 如果正在运行，并且不是递归调用
     if (
       this.flags & EffectFlags.RUNNING &&
       !(this.flags & EffectFlags.ALLOW_RECURSE)
     ) {
       return
     }
+    // 如果还没有通知过
     if (!(this.flags & EffectFlags.NOTIFIED)) {
       batch(this)
     }
@@ -150,6 +153,7 @@ export class ReactiveEffect<T = any>
   run(): T {
     // TODO cleanupEffect
 
+    // 如果还没有激活
     if (!(this.flags & EffectFlags.ACTIVE)) {
       // stopped during cleanup
       return this.fn()
@@ -157,11 +161,11 @@ export class ReactiveEffect<T = any>
 
     this.flags |= EffectFlags.RUNNING
     cleanupEffect(this)
-    prepareDeps(this)
-    const prevEffect = activeSub
-    const prevShouldTrack = shouldTrack
-    activeSub = this
-    shouldTrack = true
+    prepareDeps(this) // 准备新的依赖收集
+    const prevEffect = activeSub // 保存当前活跃的 effect
+    const prevShouldTrack = shouldTrack // 保存当前的依赖追踪状态
+    activeSub = this // 设置当前依赖
+    shouldTrack = true // 启用依赖跟踪
 
     try {
       return this.fn()
@@ -172,10 +176,10 @@ export class ReactiveEffect<T = any>
             'this is likely a Vue internal bug.',
         )
       }
-      cleanupDeps(this)
-      activeSub = prevEffect
-      shouldTrack = prevShouldTrack
-      this.flags &= ~EffectFlags.RUNNING
+      cleanupDeps(this) // 清理旧的依赖
+      activeSub = prevEffect // 恢复上一个活跃的 effect
+      shouldTrack = prevShouldTrack // 恢复上一个依赖追踪状态
+      this.flags &= ~EffectFlags.RUNNING // 清除运行标志
     }
   }
 
@@ -204,12 +208,14 @@ export class ReactiveEffect<T = any>
   /**
    * @internal
    */
+  // 如果依赖有变化，则运行
   runIfDirty(): void {
     if (isDirty(this)) {
       this.run()
     }
   }
 
+  // 如果依赖有变化，则返回 true
   get dirty(): boolean {
     return isDirty(this)
   }
@@ -248,6 +254,7 @@ export function batch(sub: Subscriber, isComputed = false): void {
 }
 
 /**
+ * 开始批量处理
  * @internal
  */
 export function startBatch(): void {
@@ -256,6 +263,8 @@ export function startBatch(): void {
 
 /**
  * Run batched effects when all batches have ended
+ *
+ * 当所有批量处理结束时，运行批量处理的 effect
  * @internal
  */
 export function endBatch(): void {
@@ -301,9 +310,12 @@ function prepareDeps(sub: Subscriber) {
   // Prepare deps for tracking, starting from the head
   for (let link = sub.deps; link; link = link.nextDep) {
     // set all previous deps' (if any) version to -1 so that we can track
+    // 将所有上一个的依赖的版本设置为 -1，以便我们可以跟踪
     // which ones are unused after the run
+    //  在运行之后哪些是未使用的
     link.version = -1
     // store previous active sub if link was being used in another context
+    // 如果链接在另一个上下文中被使用，则存储上一个活跃的 sub
     link.prevActiveLink = link.dep.activeLink
     link.dep.activeLink = link
   }

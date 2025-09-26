@@ -35,9 +35,9 @@ export const shallowReadonlyMap: WeakMap<Target, any> = new WeakMap<
 >()
 
 enum TargetType {
-  INVALID = 0,
-  COMMON = 1,
-  COLLECTION = 2,
+  INVALID = 0, // 无效
+  COMMON = 1, // 普通对象
+  COLLECTION = 2, // 集合
 }
 
 function targetTypeMap(rawType: string) {
@@ -56,6 +56,7 @@ function targetTypeMap(rawType: string) {
 }
 
 function getTargetType(value: Target) {
+  // 如果 value 有 ReactiveFlags.SKIP 属性，或者 value 不可扩展，则返回无效
   return value[ReactiveFlags.SKIP] || !Object.isExtensible(value)
     ? TargetType.INVALID
     : targetTypeMap(toRawType(value))
@@ -275,7 +276,7 @@ function createReactiveObject(
   // exception: calling readonly() on a reactive object
   if (
     target[ReactiveFlags.RAW] &&
-    !(isReadonly && target[ReactiveFlags.IS_REACTIVE])
+    !(isReadonly && target[ReactiveFlags.IS_REACTIVE]) // 不是只读的响应式对象
   ) {
     return target
   }
