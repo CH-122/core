@@ -287,7 +287,7 @@ export function proxyRefs<T extends object>(
   objectWithRefs: T,
 ): ShallowUnwrapRef<T> {
   return isReactive(objectWithRefs)
-    ? objectWithRefs
+    ? (objectWithRefs as ShallowUnwrapRef<T>)
     : new Proxy(objectWithRefs, shallowUnwrapHandlers)
 }
 

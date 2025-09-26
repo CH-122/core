@@ -756,6 +756,7 @@ export function applyOptions(instance: ComponentInternalInstance): void {
         Object.defineProperty(exposed, key, {
           get: () => publicThis[key],
           set: val => (publicThis[key] = val),
+          enumerable: true,
         })
       })
     } else if (!instance.exposed) {
@@ -851,7 +852,7 @@ export function createWatcher(
 ): void {
   let getter = key.includes('.')
     ? createPathGetter(publicThis, key)
-    : () => (publicThis as any)[key]
+    : () => publicThis[key as keyof typeof publicThis]
 
   const options: WatchOptions = {}
   if (__COMPAT__) {
